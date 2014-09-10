@@ -1,0 +1,115 @@
+<html>
+<head>
+<style type="text/css">
+body{overflow:hidden;}
+</style>
+
+<script type="text/javascript" charset="utf-8" src="https://www.moxtra.com/api/js/jquery-1.8.1.min.js"></script>
+
+</head>
+<body>
+<p>
+<table>
+<tr>
+<td>
+<h3>Get Access Token via Unique ID on Java Server</h3>
+<table>
+<tr>
+<th><label>Client ID: </label></th>
+<td><input type="text" size="80" id="client_id" /></td>
+</tr>
+<tr>
+<th><label>Client Secret: </label></th>
+<td><input type="text" size="80" id="client_secret" /></td>
+</tr>
+<tr>
+<th><label>Unique ID: </label></th>
+<td><input type="text" size="80" id="unique_id" /></td>
+</tr>
+<tr>
+<th><label>(Optional) First Name: </label></th>
+<td><input type="text" size="80" id="firstname" /></td>
+</tr>
+<tr>
+<th><label>(Optional) Last Name: </label></th>
+<td><input type="text" size="80" id="lastname" /></td>
+</tr>
+<tr colspan="2">
+<td><a href="javascript:getToken();">Get Access Token</a></td>
+</tr>
+</table>
+<br/>
+<div id="result"></div>
+<script type="text/javascript">
+
+	getToken = function() {
+
+		var client_id = document.getElementById("client_id");
+
+		if (!client_id.value) {
+			alert("You have to enter a client_id value!");
+			return false;
+		}
+
+		var client_secret = document.getElementById("client_secret");
+
+		if (!client_secret.value) {
+			alert("You have to enter a client_secret value!");
+			return false;
+		}
+
+		var uniqueid = document.getElementById("unique_id");
+
+		if (!uniqueid.value) {
+			alert("You have to enter a unique_id value!");
+			return false;
+		}
+
+		var req_url = "http://localhost:8080/apiutil/api?action=getAccessToken&client_id=" + client_id.value + "&client_secret=" +
+			client_secret.value + "&uniqueid=" + encodeURIComponent(uniqueid.value);
+
+		var firstname = document.getElementById("firstname");
+
+		if (firstname.value) {
+			req_url += "&firstname=" + encodeURIComponent(firstname.value);
+		}
+
+		var lastname = document.getElementById("lastname");
+
+		if (lastname.value) {
+			req_url += "&lastname=" + encodeURIComponent(lastname.value);
+		}
+
+    	jQuery.ajax({
+    		type: "GET",
+    		url: req_url,
+    		dataType: 'jsonp',
+    		cache: false,
+			jsonpCallback: "getdata",
+    		success: function(response, status, xhr) {
+
+    			if (response.access_token) {
+    				var result = document.getElementById("result");
+
+    				result.innerHTML = "access_token: " + response.access_token + " expires_in: " + response.expires_in;
+
+				} else {
+
+					alert(response.code + " " + response.message);
+				}
+	    	},
+        	error: function(xhr, status, response) {
+        		// error
+        		alert(JSON.parse(response.responseText));
+        	}
+		});
+	};
+
+</script>
+</td>
+
+</tr>
+</table>
+
+</body>
+</html>

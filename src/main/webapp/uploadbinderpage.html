@@ -1,0 +1,90 @@
+<html>
+<head>
+<style type="text/css">
+body{overflow:hidden;}
+</style>
+
+<script type="text/javascript" charset="utf-8" src="https://www.moxtra.com/api/js/jquery-1.8.1.min.js"></script>
+
+</head>
+<body>
+<p>
+<table>
+<tr>
+<td>
+<h3>Upload File into Binder Page on Java Server</h3>
+<table>
+<tr>
+<th><label>Access Token: </label></th>
+<td><input type="text" size="150" id="access_token" /></td>
+</tr>
+<tr>
+<th><label>Binder Id: </label></th>
+<td><input type="text" size="80" id="binder_id" /></td>
+</tr>
+<tr>
+<th><label>Document File (pdf, office, image) Path on Server: </label></th>
+<td><input type="text" size="150" id="file_path" /></td>
+</tr>
+<tr colspan="2">
+<td><a href="javascript:uploadBinderPage();">Upload File into Binder Page</a></td>
+</tr>
+</table>
+<br/>
+<div id="result"></div>
+<script type="text/javascript">
+
+	uploadBinderPage = function() {
+
+		var access_token = document.getElementById("access_token");
+		if (!access_token.value) {
+			alert("You have to enter an access_token value!");
+			return false;
+		}
+
+		var binder_id = document.getElementById("binder_id");
+		if (!binder_id.value) {
+			alert("You have to enter a binder Id!");
+			return false;
+		}
+
+		var file_path = document.getElementById("file_path");
+		if (!file_path.value) {
+			alert("You have to input a File Path!");
+			return false;
+		}
+
+		var req_url = "http://localhost:8080/apiutil/api?action=uploadBinderPage&access_token=" + access_token.value + "&binder_id=" + encodeURIComponent(binder_id.value) +
+			"&file_path=" + encodeURIComponent(file_path.value);
+
+    	jQuery.ajax({
+    		type: "GET",
+    		url: req_url,
+    		dataType: 'jsonp',
+    		cache: false,
+			jsonpCallback: "getdata",
+    		success: function(response, status, xhr) {
+
+    			if (response.message) {
+					alert(response.code + " " + response.message);
+				} else {
+					var result = document.getElementById("result");
+
+					result.innerHTML = response.code;
+				}
+	    	},
+        	error: function(xhr, status, response) {
+        		// error
+        		alert(JSON.parse(response.responseText));
+        	}
+		});
+	};
+
+</script>
+</td>
+
+</tr>
+</table>
+
+</body>
+</html>

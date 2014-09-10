@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE web-app PUBLIC "-//Sun Microsystems, Inc.//DTD Web Application 2.3//EN" "http://java.sun.com/dtd/web-app_2_3.dtd">
+<web-app>
+  <display-name>apiutil</display-name>
+  <!-- Initialization Servlet-->
+    <servlet>
+      <servlet-name>APIServlet</servlet-name>
+      <servlet-class>com.moxtra.webapp.api.APIServlet</servlet-class>
+    </servlet>
+    <servlet>
+     <servlet-name>ErrorServlet</servlet-name>
+     <servlet-class>com.moxtra.webapp.api.ErrorServlet</servlet-class>
+    </servlet>    
+  <!-- Servlet mapping -->
+  <servlet-mapping>
+    <servlet-name>APIServlet</servlet-name>
+    <url-pattern>/api</url-pattern>
+  </servlet-mapping>    
+  <servlet-mapping>
+     <servlet-name>ErrorServlet</servlet-name>
+     <url-pattern>/error</url-pattern>
+  </servlet-mapping>
+  <error-page>
+    <exception-type>java.lang.Throwable</exception-type>
+    <location>/error</location>
+  </error-page>   
+</web-app>

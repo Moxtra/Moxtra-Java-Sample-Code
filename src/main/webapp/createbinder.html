@@ -1,0 +1,81 @@
+<html>
+<head>
+<style type="text/css">
+body{overflow:hidden;}
+</style>
+
+<script type="text/javascript" charset="utf-8" src="https://www.moxtra.com/api/js/jquery-1.8.1.min.js"></script>
+
+</head>
+<body>
+<p>
+<table>
+<tr>
+<td>
+<h3>Create Binder on Java Server</h3>
+<table>
+<tr>
+<th><label>Access Token: </label></th>
+<td><input type="text" size="150" id="access_token" /></td>
+</tr>
+<tr>
+<th><label>Binder Name: </label></th>
+<td><input type="text" size="80" id="binder_name" /></td>
+</tr>
+<tr colspan="2">
+<td><a href="javascript:createBinder();">Create Binder</a></td>
+</tr>
+</table>
+<br/>
+<div id="result"></div>
+<script type="text/javascript">
+
+	createBinder = function() {
+
+		var access_token = document.getElementById("access_token");
+		if (!access_token.value) {
+			alert("You have to enter an access_token value!");
+			return false;
+		}
+
+		var binder_name = document.getElementById("binder_name");
+		if (!binder_name.value) {
+			alert("You have to enter a binder name!");
+			return false;
+		}
+
+		var req_url = "http://localhost:8080/apiutil/api?action=createBinder&access_token=" + access_token.value + "&binder_name=" + encodeURIComponent(binder_name.value);
+
+    	jQuery.ajax({
+    		type: "GET",
+    		url: req_url,
+    		dataType: 'jsonp',
+    		cache: false,
+			jsonpCallback: "getdata",
+    		success: function(response, status, xhr) {
+
+				if (response.data) {
+					var result = document.getElementById("result");
+
+					result.innerHTML = "binder Id: " + response.data.id;
+
+				} else {
+
+					alert(response.code + " " + response.message);
+				}
+	    	},
+        	error: function(xhr, status, response) {
+        		// error
+        		alert(JSON.parse(response.responseText));
+        	}
+		});
+	};
+
+</script>
+</td>
+
+</tr>
+</table>
+
+</body>
+</html>
