@@ -1,4 +1,4 @@
-Sample code to use Moxtra APIs using Java
-=========================================
+Java Sample Code for Moxtra APIs
+================================
 
 
