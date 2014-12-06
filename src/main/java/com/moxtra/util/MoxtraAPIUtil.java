@@ -18,6 +18,8 @@ import org.apache.http.NameValuePair;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.InputStreamEntity;
 import org.apache.http.entity.StringEntity;
@@ -322,7 +324,7 @@ public class MoxtraAPIUtil {
 	 * @throws MoxtraAPIUtilException
 	 */
 	
-	public static String invokeAPI(String url, String json_input, String access_token) throws MoxtraAPIUtilException {
+	public static String invokePostAPI(String url, String json_input, String access_token) throws MoxtraAPIUtilException {
 		
 		if (url == null || json_input == null || access_token == null) {
 			throw new MoxtraAPIUtilException("url, json, and access_token are required!"); 
@@ -348,7 +350,7 @@ public class MoxtraAPIUtil {
 			HttpResponse response = httpClient.execute(httppost);
 			HttpEntity responseEntity = response.getEntity(); 
 			if (response.getStatusLine().getStatusCode() != 200) {
-				throw new Exception("Invoke API failed");
+				throw new Exception("Invoke Post API failed");
 			}
 			if (responseEntity != null) {
 				json_result = EntityUtils.toString(responseEntity);
@@ -362,6 +364,95 @@ public class MoxtraAPIUtil {
 		
 	}
 	
+	/**
+	 * invoke Get API
+	 * 
+	 * @param url
+	 * @param access_token
+	 * @return response
+	 * @throws MoxtraAPIUtilException
+	 */
+	
+	public static String invokeGetAPI(String url, String access_token) throws MoxtraAPIUtilException {
+		
+		if (url == null || access_token == null) {
+			throw new MoxtraAPIUtilException("url and access_token are required!"); 
+		}
+		
+		String json_result = null;
+		
+		try {
+			String requestURL = null;
+			if (url.indexOf("?") > 0) {
+				requestURL = url + "&access_token=" + access_token;
+			} else {
+				requestURL = url + "?access_token=" + access_token;
+			}
+			
+			HttpClient httpClient = new DefaultHttpClient();
+			HttpGet httpget = new HttpGet(requestURL);
+			
+			HttpResponse response = httpClient.execute(httpget);
+			HttpEntity responseEntity = response.getEntity(); 
+			if (response.getStatusLine().getStatusCode() != 200) {
+				throw new Exception("Invoke Get API failed");
+			}
+			if (responseEntity != null) {
+				json_result = EntityUtils.toString(responseEntity);
+			}
+			
+			return json_result;
+		
+  		} catch (Exception e) {
+  			throw new MoxtraAPIUtilException(e.getMessage(), e);
+  		}
+		
+	}
+	
+	/**
+	 * invoke Delete API
+	 * 
+	 * @param url
+	 * @param access_token
+	 * @return response
+	 * @throws MoxtraAPIUtilException
+	 */
+	
+	public static String invokeDeleteAPI(String url, String access_token) throws MoxtraAPIUtilException {
+		
+		if (url == null || access_token == null) {
+			throw new MoxtraAPIUtilException("url and access_token are required!"); 
+		}
+		
+		String json_result = null;
+		
+		try {
+			String requestURL = null;
+			if (url.indexOf("?") > 0) {
+				requestURL = url + "&access_token=" + access_token;
+			} else {
+				requestURL = url + "?access_token=" + access_token;
+			}
+			
+			HttpClient httpClient = new DefaultHttpClient();
+			HttpDelete httpdelete = new HttpDelete(requestURL);
+			
+			HttpResponse response = httpClient.execute(httpdelete);
+			HttpEntity responseEntity = response.getEntity(); 
+			if (response.getStatusLine().getStatusCode() != 200) {
+				throw new Exception("Invoke Delete API failed");
+			}
+			if (responseEntity != null) {
+				json_result = EntityUtils.toString(responseEntity);
+			}
+			
+			return json_result;
+		
+  		} catch (Exception e) {
+  			throw new MoxtraAPIUtilException(e.getMessage(), e);
+  		}
+		
+	}
 	
 	
 	
