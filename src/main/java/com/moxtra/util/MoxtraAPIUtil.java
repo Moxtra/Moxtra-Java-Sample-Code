@@ -313,6 +313,59 @@ public class MoxtraAPIUtil {
 	}
 	
 	/**
+	 * invoke API
+	 * 
+	 * @param url
+	 * @param json_input
+	 * @param access_token
+	 * @return response
+	 * @throws MoxtraAPIUtilException
+	 */
+	
+	public static String invokeAPI(String url, String json_input, String access_token) throws MoxtraAPIUtilException {
+		
+		if (url == null || json_input == null || access_token == null) {
+			throw new MoxtraAPIUtilException("url, json, and access_token are required!"); 
+		}
+		
+		String json_result = null;
+		
+		try {
+			String requestURL = null;
+			if (url.indexOf("?") > 0) {
+				requestURL = url + "&access_token=" + access_token;
+			} else {
+				requestURL = url + "?access_token=" + access_token;
+			}
+			
+			HttpClient httpClient = new DefaultHttpClient();
+			HttpPost httppost = new HttpPost(requestURL);
+			
+			ContentType contentType = ContentType.create("application/json", Charset.forName("UTF-8"));
+			StringEntity entity = new StringEntity(json_input, contentType);
+			httppost.setEntity(entity);
+			
+			HttpResponse response = httpClient.execute(httppost);
+			HttpEntity responseEntity = response.getEntity(); 
+			if (response.getStatusLine().getStatusCode() != 200) {
+				throw new Exception("Invoke API failed");
+			}
+			if (responseEntity != null) {
+				json_result = EntityUtils.toString(responseEntity);
+			}
+			
+			return json_result;
+		
+  		} catch (Exception e) {
+  			throw new MoxtraAPIUtilException(e.getMessage(), e);
+  		}
+		
+	}
+	
+	
+	
+	
+	/**
 	 * create a binder with json_input String
 	 * 
 	 * @param json_input
@@ -342,7 +395,7 @@ public class MoxtraAPIUtil {
 			HttpResponse response = httpClient.execute(httppost);
 			HttpEntity responseEntity = response.getEntity(); 
 			if (response.getStatusLine().getStatusCode() != 200) {
-				throw new Exception("Upload file failed");
+				throw new Exception("Create binder failed");
 			}
 			if (responseEntity != null) {
 				json_result = EntityUtils.toString(responseEntity);
