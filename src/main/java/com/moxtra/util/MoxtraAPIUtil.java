@@ -13,19 +13,23 @@ import java.nio.charset.Charset;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import org.apache.http.HttpEntity;
-import org.apache.http.HttpResponse;
+import org.apache.http.HttpHost;
 import org.apache.http.NameValuePair;
-import org.apache.http.client.HttpClient;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
+import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.InputStreamEntity;
 import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.util.EntityUtils;
+import org.apache.http.config.SocketConfig;
+import org.apache.http.conn.routing.HttpRoute;
 import org.apache.xml.security.utils.Base64;
 import org.codehaus.jackson.map.ObjectMapper;
 import com.moxtra.util.MultipartUtility;
@@ -37,7 +41,43 @@ public class MoxtraAPIUtil {
 	public static String WEB_HOST_URL = "https://www.moxtra.com/";
 	public static String PARAM_ACCESS_TOKEN = "access_token";
 	public static String PARAM_EXPIRES_IN = "expires_in";
+	private static final int SOCKET_TIMEOUT = 30000;
+	private static final int MAX_TOTAL_CONNECTION = 100;
+	private static final int MAX_CONNECTION_PER_ROUTE = 20;
+	private static final int MAX_CONNECTION_MOXTRA = 50;
+	private static PoolingHttpClientConnectionManager ccm = null;
 	
+	
+	/**
+	 * getHttpClient
+	 * 
+	 * @return
+	 */
+	
+	private static CloseableHttpClient getHttpClient() {
+
+		  try {
+
+			  if (ccm == null) {
+				  PoolingHttpClientConnectionManager ccm = new PoolingHttpClientConnectionManager();
+				  
+				  // Increase max total connection to 100
+				  ccm.setMaxTotal(MAX_TOTAL_CONNECTION);
+				  // Increase default max connection per route to 20
+				  ccm.setDefaultMaxPerRoute(MAX_CONNECTION_PER_ROUTE);
+				  // Increase max connections for api.moxtra.com to 50
+				  HttpHost moxtrahost = new HttpHost(API_HOST_URL, 443);
+				  ccm.setMaxPerRoute(new HttpRoute(moxtrahost), MAX_CONNECTION_MOXTRA);
+				  
+				  ccm.setSocketConfig(moxtrahost, SocketConfig.custom().setSoTimeout(SOCKET_TIMEOUT).build());
+			  }
+		   
+			  return HttpClients.custom().setConnectionManager(ccm).build();
+		   
+		  } catch (Exception e) {
+			  return HttpClients.createDefault();
+		  }
+	 } 
 	
 	/**
 	 * To get the Access Token via /oauth/token unique_id. The return in the following JSON format
@@ -57,6 +97,7 @@ public class MoxtraAPIUtil {
 	 * @throws MoxtraAPIUtilException
 	 */
 	
+	@SuppressWarnings("unchecked")
 	public static HashMap<String, Object> getAccessToken(String client_id, String client_secret, String unique_id,
 			String firstname, String lastname) throws MoxtraAPIUtilException {
 		
@@ -66,6 +107,9 @@ public class MoxtraAPIUtil {
 		
 		String timestamp = Long.toString(System.currentTimeMillis());
 		HashMap<String, Object> myMap = new HashMap<String, Object>();
+		
+		CloseableHttpClient httpClient = null;
+		CloseableHttpResponse response = null;
 		
 		try {
 
@@ -80,9 +124,9 @@ public class MoxtraAPIUtil {
 			total.append(unique_id);
 			total.append(timestamp);		
 			
-			String signature = new String(encodeUrlSafe(sha256_HMAC.doFinal(total.toString().getBytes()))).trim();			
+			String signature = encodeUrlSafe(sha256_HMAC.doFinal(total.toString().getBytes()));			
 			
-			HttpClient httpClient = new DefaultHttpClient();
+			httpClient = getHttpClient();
 			HttpPost httpPost = new HttpPost(API_HOST_URL + "oauth/token");
 			// Request parameters and other properties.
 			List<NameValuePair> params = new ArrayList<NameValuePair>();
@@ -103,7 +147,7 @@ public class MoxtraAPIUtil {
 			}
 		    httpPost.setEntity(new UrlEncodedFormEntity(params, "UTF-8"));
 		    
-		    HttpResponse response = httpClient.execute(httpPost);		    
+		    response = httpClient.execute(httpPost);		    
 			HttpEntity responseEntity = response.getEntity(); 
 			if (response.getStatusLine().getStatusCode() != 200) {
 				throw new Exception("unable to get access_token");
@@ -124,6 +168,22 @@ public class MoxtraAPIUtil {
             
   		} catch (Exception e) {
   			throw new MoxtraAPIUtilException(e.getMessage(), e);
+  		} finally {
+  			if (response != null) {
+  				try {
+  					response.close();
+				} catch (IOException ex) {
+					throw new MoxtraAPIUtilException(ex.getMessage(), ex);
+				}
+  			}
+  			
+  			if (httpClient != null) {
+  				try {
+  					httpClient.close();
+				} catch (IOException ex) {
+					throw new MoxtraAPIUtilException(ex.getMessage(), ex);
+				}
+  			}  						
   		}
 		
 	}
@@ -271,6 +331,8 @@ public class MoxtraAPIUtil {
 		
 		String json_result = null;
 		InputStream inputStream = null;
+		CloseableHttpClient httpClient = null;
+		CloseableHttpResponse response = null;
 
 		try {
 
@@ -281,12 +343,12 @@ public class MoxtraAPIUtil {
 			
 			long length = uploadFile.length();
 			
-			HttpClient httpClient = new DefaultHttpClient();
+			httpClient = getHttpClient();
 			HttpPost httppost = new HttpPost(requestURL);
 			InputStreamEntity entity = new InputStreamEntity(inputStream, length, ContentType.APPLICATION_OCTET_STREAM);
 			httppost.setEntity(entity);
 			
-			HttpResponse response = httpClient.execute(httppost);
+			response = httpClient.execute(httppost);
 			HttpEntity responseEntity = response.getEntity(); 
 			if (response.getStatusLine().getStatusCode() != 200) {
 				throw new Exception("Upload file failed");
@@ -310,6 +372,21 @@ public class MoxtraAPIUtil {
 				}
 			}
 			
+  			if (response != null) {
+  				try {
+  					response.close();
+				} catch (IOException ex) {
+					throw new MoxtraAPIUtilException(ex.getMessage(), ex);
+				}
+  			}
+  			
+  			if (httpClient != null) {
+  				try {
+  					httpClient.close();
+				} catch (IOException ex) {
+					throw new MoxtraAPIUtilException(ex.getMessage(), ex);
+				}
+  			}  						
 		}
 		
 	}
@@ -331,6 +408,8 @@ public class MoxtraAPIUtil {
 		}
 		
 		String json_result = null;
+		CloseableHttpClient httpClient = null;
+		CloseableHttpResponse response = null;
 		
 		try {
 			String requestURL = null;
@@ -340,14 +419,14 @@ public class MoxtraAPIUtil {
 				requestURL = url + "?access_token=" + access_token;
 			}
 			
-			HttpClient httpClient = new DefaultHttpClient();
+			httpClient = getHttpClient();
 			HttpPost httppost = new HttpPost(requestURL);
 			
 			ContentType contentType = ContentType.create("application/json", Charset.forName("UTF-8"));
 			StringEntity entity = new StringEntity(json_input, contentType);
 			httppost.setEntity(entity);
 			
-			HttpResponse response = httpClient.execute(httppost);
+			response = httpClient.execute(httppost);
 			HttpEntity responseEntity = response.getEntity(); 
 			if (response.getStatusLine().getStatusCode() != 200) {
 				throw new Exception("Invoke Post API failed");
@@ -360,6 +439,22 @@ public class MoxtraAPIUtil {
 		
   		} catch (Exception e) {
   			throw new MoxtraAPIUtilException(e.getMessage(), e);
+  		} finally {
+  			if (response != null) {
+  				try {
+  					response.close();
+				} catch (IOException ex) {
+					throw new MoxtraAPIUtilException(ex.getMessage(), ex);
+				}
+  			}
+  			
+  			if (httpClient != null) {
+  				try {
+  					httpClient.close();
+				} catch (IOException ex) {
+					throw new MoxtraAPIUtilException(ex.getMessage(), ex);
+				}
+  			}  						
   		}
 		
 	}
@@ -380,6 +475,8 @@ public class MoxtraAPIUtil {
 		}
 		
 		String json_result = null;
+		CloseableHttpClient httpClient = null;
+		CloseableHttpResponse response = null;
 		
 		try {
 			String requestURL = null;
@@ -389,10 +486,10 @@ public class MoxtraAPIUtil {
 				requestURL = url + "?access_token=" + access_token;
 			}
 			
-			HttpClient httpClient = new DefaultHttpClient();
+			httpClient = getHttpClient();
 			HttpGet httpget = new HttpGet(requestURL);
 			
-			HttpResponse response = httpClient.execute(httpget);
+			response = httpClient.execute(httpget);
 			HttpEntity responseEntity = response.getEntity(); 
 			if (response.getStatusLine().getStatusCode() != 200) {
 				throw new Exception("Invoke Get API failed");
@@ -405,6 +502,22 @@ public class MoxtraAPIUtil {
 		
   		} catch (Exception e) {
   			throw new MoxtraAPIUtilException(e.getMessage(), e);
+  		} finally {
+  			if (response != null) {
+  				try {
+  					response.close();
+				} catch (IOException ex) {
+					throw new MoxtraAPIUtilException(ex.getMessage(), ex);
+				}
+  			}
+  			
+  			if (httpClient != null) {
+  				try {
+  					httpClient.close();
+				} catch (IOException ex) {
+					throw new MoxtraAPIUtilException(ex.getMessage(), ex);
+				}
+  			}  						
   		}
 		
 	}
@@ -425,7 +538,9 @@ public class MoxtraAPIUtil {
 		}
 		
 		String json_result = null;
-		
+		CloseableHttpClient httpClient = null;
+		CloseableHttpResponse response = null;
+
 		try {
 			String requestURL = null;
 			if (url.indexOf("?") > 0) {
@@ -434,10 +549,10 @@ public class MoxtraAPIUtil {
 				requestURL = url + "?access_token=" + access_token;
 			}
 			
-			HttpClient httpClient = new DefaultHttpClient();
+			httpClient = getHttpClient();
 			HttpDelete httpdelete = new HttpDelete(requestURL);
 			
-			HttpResponse response = httpClient.execute(httpdelete);
+			response = httpClient.execute(httpdelete);
 			HttpEntity responseEntity = response.getEntity(); 
 			if (response.getStatusLine().getStatusCode() != 200) {
 				throw new Exception("Invoke Delete API failed");
@@ -450,6 +565,22 @@ public class MoxtraAPIUtil {
 		
   		} catch (Exception e) {
   			throw new MoxtraAPIUtilException(e.getMessage(), e);
+  		} finally {
+  			if (response != null) {
+  				try {
+  					response.close();
+				} catch (IOException ex) {
+					throw new MoxtraAPIUtilException(ex.getMessage(), ex);
+				}
+  			}
+  			
+  			if (httpClient != null) {
+  				try {
+  					httpClient.close();
+				} catch (IOException ex) {
+					throw new MoxtraAPIUtilException(ex.getMessage(), ex);
+				}
+  			}  						
   		}
 		
 	}
@@ -472,18 +603,20 @@ public class MoxtraAPIUtil {
 		}
 		
 		String json_result = null;
+		CloseableHttpClient httpClient = null;
+		CloseableHttpResponse response = null;
 		
 		try {
 			String requestURL = API_HOST_URL + "me/binders?access_token=" + access_token;
 			
-			HttpClient httpClient = new DefaultHttpClient();
+			httpClient = getHttpClient();
 			HttpPost httppost = new HttpPost(requestURL);
 			
 			ContentType contentType = ContentType.create("application/json", Charset.forName("UTF-8"));
 			StringEntity entity = new StringEntity(json_input, contentType);
 			httppost.setEntity(entity);
 			
-			HttpResponse response = httpClient.execute(httppost);
+			response = httpClient.execute(httppost);
 			HttpEntity responseEntity = response.getEntity(); 
 			if (response.getStatusLine().getStatusCode() != 200) {
 				throw new Exception("Create binder failed");
@@ -496,6 +629,22 @@ public class MoxtraAPIUtil {
 		
   		} catch (Exception e) {
   			throw new MoxtraAPIUtilException(e.getMessage(), e);
+  		} finally {
+  			if (response != null) {
+  				try {
+  					response.close();
+				} catch (IOException ex) {
+					throw new MoxtraAPIUtilException(ex.getMessage(), ex);
+				}
+  			}
+  			
+  			if (httpClient != null) {
+  				try {
+  					httpClient.close();
+				} catch (IOException ex) {
+					throw new MoxtraAPIUtilException(ex.getMessage(), ex);
+				}
+  			}  						
   		}
 		
 	}
@@ -506,7 +655,7 @@ public class MoxtraAPIUtil {
 	 * @param data
 	 * @return
 	 */
-	public static byte[] encodeUrlSafe(byte[] data) {
+	public static String encodeUrlSafe(byte[] data) {
 	    String strcode = Base64.encode(data);
 	    byte[] encode = strcode.getBytes(); 
 	    for (int i = 0; i < encode.length; i++) {
@@ -518,7 +667,7 @@ public class MoxtraAPIUtil {
 	        	encode[i] = ' ';
 	        }
 	    }
-	    return encode;
+	    return new String(encode).trim();
 	}	
 
 }

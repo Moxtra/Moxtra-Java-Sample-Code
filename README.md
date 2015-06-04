@@ -19,6 +19,9 @@ see the samples as follows:
   + Upload Binder Cover
   + Upload Page into Binder
   + Upload File into Meet
+  + Invoke Get API 
+  + Invoke Post API
+  + Invoke Delete API
 
 ## Samples
 
