@@ -37,7 +37,7 @@ import com.moxtra.util.MultipartUtility;
 
 public class MoxtraAPIUtil {
 	public static String UNIQUEID_GRANT_TYPE = "http://www.moxtra.com/auth_uniqueid"; 
-	public static String API_HOST_URL = "https://api.moxtra.com/";
+	public static String API_HOST_URL = "https://apisandbox.moxtra.com/";
 	public static String WEB_HOST_URL = "https://www.moxtra.com/";
 	public static String PARAM_ACCESS_TOKEN = "access_token";
 	public static String PARAM_EXPIRES_IN = "expires_in";
