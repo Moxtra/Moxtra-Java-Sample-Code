@@ -5,7 +5,7 @@ This repository contains Java code samples to help you get started in integratin
 
 Please feel free to clone the repository and use the example code.
 
-For the detailed documentation on Moxtra APIs please visit http://developer.moxtra.com
+For the detailed documentation on Moxtra APIs please visit [Moxtra Developer Portal](https://developer.moxtra.com/docs/docs-rest-api/)
 
 ## How to run
 
