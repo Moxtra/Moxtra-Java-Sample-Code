@@ -14,6 +14,7 @@ import java.io.PrintWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLConnection;
+import java.nio.file.Files;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
@@ -33,7 +34,7 @@ import javax.net.ssl.X509TrustManager;
 
 /**
  * This utility class provides an abstraction layer for sending multipart HTTP
- * POST requests to a web server. 
+ * POST requests to a web server.
  *
  */
 public class MultipartUtility {
@@ -44,14 +45,14 @@ public class MultipartUtility {
 	private OutputStream outputStream;
 	private PrintWriter writer;
 
-	
+
 	private static final HostnameVerifier DO_NOT_VERIFY = new HostnameVerifier() {
 		@Override
 		public boolean verify(String hostname, SSLSession session) {
 			return true;
 		}
-	};	
-	
+	};
+
 	/**
 	 * This constructor initializes a new HTTP POST request with content type
 	 * is set to multipart/form-data
@@ -62,14 +63,14 @@ public class MultipartUtility {
 	public MultipartUtility(String requestURL, String charset)
 			throws IOException, KeyManagementException, NoSuchAlgorithmException {
 		this.charset = charset;
-		
+
 		// creates a unique boundary based on time stamp
 		boundary = "------" + System.currentTimeMillis() + "------";
-		
+
 		SSLContext ctx = SSLContext.getInstance("TLS");
         ctx.init(new KeyManager[0], new TrustManager[] {new DefaultTrustManager()}, new SecureRandom());
         SSLContext.setDefault(ctx);
-		
+
 		URL url = new URL(requestURL);
 		if (requestURL.contains("https://")) {
 			httpConn = (HttpsURLConnection) url.openConnection();
@@ -77,7 +78,7 @@ public class MultipartUtility {
 		} else {
 			httpConn = (HttpURLConnection) url.openConnection();
 		}
-		
+
 		httpConn.setUseCaches(false);
 		httpConn.setDoOutput(true);	// indicates POST method
 		httpConn.setDoInput(true);
@@ -88,7 +89,7 @@ public class MultipartUtility {
 		writer = new PrintWriter(new OutputStreamWriter(outputStream, charset),
 				true);
 	}
-	
+
 	private static class DefaultTrustManager implements X509TrustManager {
 
         @Override
@@ -101,7 +102,7 @@ public class MultipartUtility {
         public X509Certificate[] getAcceptedIssuers() {
             return null;
         }
-    }	
+    }
 
 	/**
 	 * Adds a form field to the request
@@ -118,7 +119,7 @@ public class MultipartUtility {
 		writer.append(value).append(LINE_FEED);
 		writer.flush();
 	}
-	
+
 	/**
 	 * Adds a JSON field to the request
 	 * @param name field name
@@ -137,25 +138,42 @@ public class MultipartUtility {
 
 	/**
 	 * upload a file from existing content
-	 * 
+	 *
 	 * @param fieldName
 	 * @param fileName
 	 * @param content
 	 * @throws IOException
 	 */
-	
+
 	public void addFilePart(String fieldName, String fileName, String content)
 			throws IOException {
-		
+
 		writer.append("--" + boundary).append(LINE_FEED);
 		writer.append(
 				"Content-Disposition: form-data; name=\"" + fieldName
 						+ "\"; filename=\"" + fileName + "\"")
 				.append(LINE_FEED);
-		writer.append(
-				"Content-Type: "
-						+ URLConnection.guessContentTypeFromName(fileName))
-				.append(LINE_FEED);
+
+
+		try {
+
+			File uploadFile = new File(fileName);
+
+	        String contentType = Files.probeContentType(uploadFile.toPath());
+	        if (contentType == null) contentType = "application/octet-stream";
+
+			writer.append(
+					"Content-Type: " + contentType)
+					.append(LINE_FEED);
+
+		} catch (Exception e) {
+
+			writer.append(
+					"Content-Type: "
+							+ URLConnection.guessContentTypeFromName(fileName))
+					.append(LINE_FEED);
+		}
+
 		writer.append("Content-Transfer-Encoding: binary").append(LINE_FEED);
 		writer.append(LINE_FEED);
 		writer.flush();
@@ -168,15 +186,14 @@ public class MultipartUtility {
 		}
 		outputStream.flush();
 		inputStream.close();
-		
-		writer.append(LINE_FEED);
-		writer.flush();		
-	}	
-	
+
+		writer.flush();
+	}
+
 	/**
-	 * Adds a upload file section to the request 
+	 * Adds a upload file section to the request
 	 * @param fieldName name attribute in <input type="file" name="..." />
-	 * @param uploadFile a File to be uploaded 
+	 * @param uploadFile a File to be uploaded
 	 * @throws IOException
 	 */
 	public void addFilePart(String fieldName, File uploadFile)
@@ -187,10 +204,14 @@ public class MultipartUtility {
 				"Content-Disposition: form-data; name=\"" + fieldName
 						+ "\"; filename=\"" + fileName + "\"")
 				.append(LINE_FEED);
+
+        String contentType = Files.probeContentType(uploadFile.toPath());
+        if (contentType == null) contentType = "application/octet-stream";
+
 		writer.append(
-				"Content-Type: "
-						+ URLConnection.guessContentTypeFromName(fileName))
+				"Content-Type: " + contentType)
 				.append(LINE_FEED);
+
 		writer.append("Content-Transfer-Encoding: binary").append(LINE_FEED);
 		writer.append(LINE_FEED);
 		writer.flush();
@@ -203,9 +224,8 @@ public class MultipartUtility {
 		}
 		outputStream.flush();
 		inputStream.close();
-		
-		writer.append(LINE_FEED);
-		writer.flush();		
+
+		writer.flush();
 	}
 
 	/**
@@ -217,7 +237,7 @@ public class MultipartUtility {
 		writer.append(name + ": " + value).append(LINE_FEED);
 		writer.flush();
 	}
-	
+
 	/**
 	 * Completes the request and receives response from the server.
 	 * @return a list of Strings as response in case the server returned
@@ -257,9 +277,9 @@ public class MultipartUtility {
 					}
 					ereader.close();
 				} catch (Exception e) {
-					error += e.getMessage(); 
+					error += e.getMessage();
 				}
-				
+
 				String message = httpConn.getResponseMessage();
 				throw new IOException("Server returned non-OK status: " + status + " message: " + message + " error: " + error);
 			}
